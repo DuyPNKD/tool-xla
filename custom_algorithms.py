@@ -61,6 +61,14 @@ def create_gaussian_kernel(size: int, sigma: float = 1.0) -> np.ndarray:
         - Gonzalez & Woods: Digital Image Processing, Chapter 3
         - https://en.wikipedia.org/wiki/Gaussian_blur
     """
+    # Validation
+    if size < 3:
+        raise ValueError(f"Kernel size phải ≥ 3, nhận được: {size}")
+    if size % 2 == 0:
+        raise ValueError(f"Kernel size phải là số lẻ, nhận được: {size}")
+    if sigma <= 0:
+        raise ValueError(f"Sigma phải > 0, nhận được: {sigma}")
+    
     kernel = np.zeros((size, size))
     center = size // 2
     
@@ -108,6 +116,14 @@ def convolve2d(image: np.ndarray, kernel: np.ndarray) -> np.ndarray:
         >>> blur_kernel = create_gaussian_kernel(5)
         >>> blurred = convolve2d(image, blur_kernel)
     """
+    # Validation
+    if image.size == 0:
+        raise ValueError("Ảnh rỗng (empty image)")
+    if kernel.shape[0] != kernel.shape[1]:
+        raise ValueError(f"Kernel phải là ma trận vuông, nhận: {kernel.shape}")
+    if kernel.shape[0] % 2 == 0:
+        raise ValueError(f"Kernel size phải lẻ, nhận: {kernel.shape[0]}")
+    
     if len(image.shape) == 3:
         # Xử lý từng channel riêng
         result = np.zeros_like(image)
@@ -123,7 +139,8 @@ def convolve2d(image: np.ndarray, kernel: np.ndarray) -> np.ndarray:
     kh, kw = kernel.shape
     result = np.zeros_like(image, dtype=np.float64)
     
-    # Convolution
+    # Convolution với tối ưu
+    # TODO: Có thể tối ưu thêm bằng vectorization hoặc scipy.signal.convolve2d
     for i in range(h):
         for j in range(w):
             region = padded[i:i+kh, j:j+kw]
@@ -131,6 +148,9 @@ def convolve2d(image: np.ndarray, kernel: np.ndarray) -> np.ndarray:
     
     return np.clip(result, 0, 255).astype(np.uint8)
 
+
+# Cache cho Gaussian kernels (tăng hiệu suất)
+_gaussian_kernel_cache = {}
 
 def custom_gaussian_blur(image: np.ndarray, ksize: int, sigma: float = None) -> np.ndarray:
     """
@@ -176,7 +196,12 @@ def custom_gaussian_blur(image: np.ndarray, ksize: int, sigma: float = None) -> 
     if sigma is None:
         sigma = 0.3 * ((ksize - 1) * 0.5 - 1) + 0.8
     
-    kernel = create_gaussian_kernel(ksize, sigma)
+    # Sử dụng cache để tránh tính lại kernel giống nhau
+    cache_key = (ksize, round(sigma, 3))
+    if cache_key not in _gaussian_kernel_cache:
+        _gaussian_kernel_cache[cache_key] = create_gaussian_kernel(ksize, sigma)
+    kernel = _gaussian_kernel_cache[cache_key]
+    
     return convolve2d(image, kernel)
 
 

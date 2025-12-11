@@ -115,10 +115,7 @@ pip install -r requirements.txt
 ### **Bước 3: Chạy ứng dụng**
 
 ```bash
-# 🎯 Khuyến nghị: Phiên bản đầy đủ tính năng
-streamlit run app_new.py
-
-# 📌 Phiên bản đơn giản (basic)
+# 🎯 Chạy ứng dụng chính (Full features)
 streamlit run app.py
 ```
 
