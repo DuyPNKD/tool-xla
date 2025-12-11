@@ -3,6 +3,8 @@ import cv2
 import numpy as np
 from PIL import Image
 import io
+# Import custom algorithms (tự implement)
+import custom_algorithms as ca
 
 # ==================== CẤU HÌNH TRANG ====================
 st.set_page_config(page_title="Image Processing Tool", layout="wide")
@@ -55,130 +57,111 @@ def apply_flip(image: np.ndarray, mode: str) -> np.ndarray:
 # --- Nhóm Tăng cường ảnh ---
 
 def apply_gaussian_blur(image: np.ndarray, ksize: int) -> np.ndarray:
-    """Áp dụng bộ lọc Gaussian Blur với kernel size cho trước."""
+    """Áp dụng bộ lọc Gaussian Blur với kernel size cho trước.
+    CUSTOM IMPLEMENTATION - Tự implement từ đầu."""
     # Đảm bảo ksize là số lẻ
     if ksize % 2 == 0:
         ksize += 1
-    blurred = cv2.GaussianBlur(image, (ksize, ksize), 0)
+    blurred = ca.custom_gaussian_blur(image, ksize)
     return blurred
 
 
 def apply_median_blur(image: np.ndarray, ksize: int) -> np.ndarray:
-    """Áp dụng bộ lọc Median Blur với kernel size cho trước."""
+    """Áp dụng bộ lọc Median Blur với kernel size cho trước.
+    CUSTOM IMPLEMENTATION - Tự implement từ đầu."""
     # Đảm bảo ksize là số lẻ
     if ksize % 2 == 0:
         ksize += 1
-    blurred = cv2.medianBlur(image, ksize)
+    blurred = ca.custom_median_filter(image, ksize)
     return blurred
 
 
 def apply_sharpen(image: np.ndarray) -> np.ndarray:
-    """Làm sắc nét ảnh bằng kernel sharpening."""
-    kernel = np.array([[-1, -1, -1],
-                       [-1,  9, -1],
-                       [-1, -1, -1]])
-    sharpened = cv2.filter2D(image, -1, kernel)
-    # Đảm bảo giá trị pixel trong khoảng [0, 255]
-    sharpened = np.clip(sharpened, 0, 255).astype(np.uint8)
+    """Làm sắc nét ảnh bằng kernel sharpening.
+    CUSTOM IMPLEMENTATION - Tự implement convolution từ đầu."""
+    sharpened = ca.custom_sharpen(image)
     return sharpened
 
 
 def apply_hist_equalization(image: np.ndarray) -> np.ndarray:
-    """Cân bằng histogram để tăng cường độ tương phản."""
-    # Chuyển sang YUV để xử lý kênh Y (độ sáng)
-    yuv = cv2.cvtColor(image, cv2.COLOR_RGB2YUV)
-    yuv[:, :, 0] = cv2.equalizeHist(yuv[:, :, 0])
-    equalized = cv2.cvtColor(yuv, cv2.COLOR_YUV2RGB)
+    """Cân bằng histogram để tăng cường độ tương phản.
+    CUSTOM IMPLEMENTATION - Tự tính CDF và mapping từ đầu."""
+    equalized = ca.custom_histogram_equalization(image)
     return equalized
 
 
 # --- Nhóm Phát hiện biên ---
 
 def apply_sobel(image: np.ndarray, mode: str) -> np.ndarray:
-    """Phát hiện biên bằng toán tử Sobel theo hướng X, Y hoặc magnitude."""
-    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-    
+    """Phát hiện biên bằng toán tử Sobel theo hướng X, Y hoặc magnitude.
+    CUSTOM IMPLEMENTATION - Tự implement Sobel convolution từ đầu."""
     if mode == "Sobel X":
-        sobel = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
+        result = ca.custom_sobel_operator(image, 'x')
     elif mode == "Sobel Y":
-        sobel = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
+        result = ca.custom_sobel_operator(image, 'y')
     elif mode == "Sobel Magnitude":
-        sobel_x = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
-        sobel_y = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
-        sobel = np.sqrt(sobel_x**2 + sobel_y**2)
+        result = ca.custom_sobel_operator(image, 'both')
     else:
         return image
     
-    # Chuyển về uint8 và normalize
-    sobel = np.abs(sobel)
-    sobel = np.uint8(255 * sobel / np.max(sobel))
-    sobel_3channel = cv2.cvtColor(sobel, cv2.COLOR_GRAY2RGB)
-    return sobel_3channel
+    return result
 
 
 def apply_canny(image: np.ndarray, th1: int, th2: int) -> np.ndarray:
-    """Phát hiện biên bằng thuật toán Canny với ngưỡng cho trước."""
-    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-    edges = cv2.Canny(gray, th1, th2)
-    edges_3channel = cv2.cvtColor(edges, cv2.COLOR_GRAY2RGB)
-    return edges_3channel
+    """Phát hiện biên bằng thuật toán Canny với ngưỡng cho trước.
+    CUSTOM IMPLEMENTATION - Tự implement toàn bộ 5 bước Canny từ đầu:
+    1. Gaussian blur, 2. Sobel gradient, 3. Non-max suppression,
+    4. Double threshold, 5. Edge tracking by hysteresis."""
+    edges = ca.custom_canny_edge(image, th1, th2)
+    return edges
 
 
 # --- Nhóm Phân ngưỡng ---
 
 def apply_threshold(image: np.ndarray, T: int) -> np.ndarray:
-    """Phân ngưỡng toàn cục với ngưỡng T cho trước."""
-    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-    _, thresh = cv2.threshold(gray, T, 255, cv2.THRESH_BINARY)
-    thresh_3channel = cv2.cvtColor(thresh, cv2.COLOR_GRAY2RGB)
-    return thresh_3channel
+    """Phân ngưỡng toàn cục với ngưỡng T cho trước.
+    CUSTOM IMPLEMENTATION - Tự implement từ đầu."""
+    thresh = ca.custom_global_threshold(image, T)
+    return thresh
 
 
 def apply_otsu(image: np.ndarray) -> np.ndarray:
-    """Phân ngưỡng tự động bằng phương pháp Otsu."""
-    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-    _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    thresh_3channel = cv2.cvtColor(thresh, cv2.COLOR_GRAY2RGB)
-    return thresh_3channel
+    """Phân ngưỡng tự động bằng phương pháp Otsu.
+    CUSTOM IMPLEMENTATION - Tự tính between-class variance để tìm ngưỡng tối ưu."""
+    thresh = ca.custom_otsu_threshold(image)
+    return thresh
 
 
 def apply_adaptive_threshold(image: np.ndarray, mode: str) -> np.ndarray:
-    """Phân ngưỡng thích ứng với phương pháp Mean hoặc Gaussian."""
-    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-    
+    """Phân ngưỡng thích ứng với phương pháp Mean hoặc Gaussian.
+    CUSTOM IMPLEMENTATION - Tự tính threshold cục bộ từng vùng."""
     if mode == "Adaptive Mean Threshold":
-        thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, 
-                                       cv2.THRESH_BINARY, 11, 2)
+        thresh = ca.custom_adaptive_threshold(image, 11, 2, 'mean')
     elif mode == "Adaptive Gaussian Threshold":
-        thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                                       cv2.THRESH_BINARY, 11, 2)
+        thresh = ca.custom_adaptive_threshold(image, 11, 2, 'gaussian')
     else:
         return image
     
-    thresh_3channel = cv2.cvtColor(thresh, cv2.COLOR_GRAY2RGB)
-    return thresh_3channel
+    return thresh
 
 
 # --- Nhóm Morphology ---
 
 def apply_morphology(image: np.ndarray, op: str, ksize: int) -> np.ndarray:
-    """Áp dụng các phép toán hình thái học: Erosion, Dilation, Opening, Closing."""
-    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (ksize, ksize))
-    
+    """Áp dụng các phép toán hình thái học: Erosion, Dilation, Opening, Closing.
+    CUSTOM IMPLEMENTATION - Tự implement min/max operations từ đầu."""
     if op == "Erosion":
-        result = cv2.erode(gray, kernel, iterations=1)
+        result = ca.custom_erosion(image, ksize)
     elif op == "Dilation":
-        result = cv2.dilate(gray, kernel, iterations=1)
+        result = ca.custom_dilation(image, ksize)
     elif op == "Opening":
-        result = cv2.morphologyEx(gray, cv2.MORPH_OPEN, kernel)
+        result = ca.custom_opening(image, ksize)
     elif op == "Closing":
-        result = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, kernel)
+        result = ca.custom_closing(image, ksize)
     else:
         return image
     
-    result_3channel = cv2.cvtColor(result, cv2.COLOR_GRAY2RGB)
-    return result_3channel
+    return result
 
 
 # --- Nhóm Hiệu ứng ---
